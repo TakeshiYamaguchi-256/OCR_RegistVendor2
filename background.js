@@ -129,8 +129,12 @@ const LOCAL_MODEL_FILENAME = 'local-llm-model.bin'; // ← この定数を追加
 
 // ファイルシステムにモデルファイルが存在するか確認
 async function checkModelFileExists() {
-  // if (!filename) return false; ← この行を削除
   try {
+    if (!navigator.storage || !navigator.storage.getDirectory) {
+      console.warn('File System Access API is unavailable');
+      return false;
+    }
+
     const root = await navigator.storage.getDirectory();
     await root.getFileHandle(LOCAL_MODEL_FILENAME);
     return true;
@@ -138,7 +142,7 @@ async function checkModelFileExists() {
     if (e.name === 'NotFoundError') {
       return false;
     }
-    console.error("Error checking for model file:", e);
+    console.error('Error checking for model file:', e);
     return false;
   }
 }

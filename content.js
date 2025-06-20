@@ -185,7 +185,7 @@ if (!window.globalOcrLock) {
   
 
 
-async function initializeLocalLLMModel(modelName) {
+async function initializeLocalLLMModel(modelName, modelPath = null) {
   try {
     console.log(`ローカルLLMモデル "${modelName}" を初期化中...`);
     
@@ -220,7 +220,7 @@ async function initializeLocalLLMModel(modelName) {
     if (!window.localLLMEngine.initialized || window.localLLMEngine.modelName !== modelName) {
       console.log('ローカルLLMを初期化しています...');
       
-      const success = await window.localLLMEngine.initialize(modelName);
+      const success = await window.localLLMEngine.initialize(modelName, modelPath);
       
       if (success) {
         console.log('ローカルLLMモデル初期化完了');
@@ -498,7 +498,7 @@ function saveLocalLLMUsageStats(method, processingTime) {
     console.log('ローカルLLMモデル初期化リクエスト受信:', request.model);
     
     // 非同期処理を適切に処理
-    initializeLocalLLMModel(request.model)
+    initializeLocalLLMModel(request.model, request.modelPath)
       .then(result => {
         console.log('初期化成功:', result);
         sendResponse(result);
