@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Simple OCR Text Extractor (Enhanced)</title>
+  <style>
+    body {
+      width: 380px;
+      padding: 15px;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      color: #333;
+    }
+    h2 {
+      margin-top: 0;
+      color: #1a73e8;
+      font-size: 18px;
+    }
+    .section {
+      margin-top: 15px;
+      background-color: #f9f9f9;
+      padding: 12px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .toggle-label {
+      font-weight: 500;
+      color: #444;
+      flex: 1;
+    }
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 24px;
+      background-color: #ccc;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .toggle-switch.active {
+      background-color: #1a73e8;
+    }
+    .toggle-slider {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background-color: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .toggle-switch.active .toggle-slider {
+      transform: translateX(26px);
+    }
+    .mode-description {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    .mode-indicator {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    .mode-local {
+      background-color: #e8f5e9;
+      color: #388e3c;
+    }
+    .mode-cloud {
+      background-color: #e3f2fd;
+      color: #1976d2;
+    }
+    .mode-hybrid {
+      background-color: #fff3e0;
+      color: #f57400;
+    }
+    .mode-auto {
+      background-color: #f3e5f5;
+      color: #7b1fa2;
+    }
+    
+    /* プログレスバー */
+    .progress-container {
+      margin-top: 10px;
+      background-color: #f0f0f0;
+      border-radius: 4px;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-bar {
+      height: 20px;
+      background-color: #4CAF50;
+      width: 0%;
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+    }
+    
+    /* モデル選択 */
+    .model-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .model-card {
+      padding: 8px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .model-card:hover {
+      border-color: #1a73e8;
+    }
+    .model-card.selected {
+      border-color: #1a73e8;
+      background-color: #e3f2fd;
+    }
+    .model-name {
+      font-weight: 500;
+      font-size: 13px;
+      margin-bottom: 2px;
+    }
+    .model-size {
+      font-size: 10px;
+      color: #666;
+    }
+    .model-status {
+      font-size: 10px;
+      margin-top: 2px;
+    }
+    .status-ready {
+      color: #4CAF50;
+    }
+    .status-loading {
+      color: #ff9800;
+    }
+    .status-error {
+      color: #f44336;
+    }
+    
+    /* 統計表示 */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .stat-item {
+      text-align: center;
+      padding: 6px;
+      background-color: white;
+      border-radius: 4px;
+    }
+    .stat-value {
+      font-size: 16px;
+      font-weight: bold;
+      color: #1a73e8;
+    }
+    .stat-label {
+      font-size: 10px;
+      color: #666;
+    }
+    
+    select, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: white;
+    }
+    
+    button {
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #0d62cb;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .help-text {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #666;
+      font-style: italic;
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+    .indicator-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .indicator-active {
+      background-color: #4CAF50;
+    }
+    .indicator-inactive {
+      background-color: #ff5252;
+    }
+    .indicator-loading {
+      background-color: #ff9800;
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <h2>🚀 Enhanced OCR Engine</h2>
+  
+  <!-- ローカルLLM設定 -->
+  <div class="section">
+    <div class="toggle-container">
+      <div class="toggle-label">
+        ローカルLLM
+        <span id="localLlmIndicator" class="mode-indicator mode-local">ローカル</span>
+      </div>
+      <div class="toggle-switch active" id="localLlmToggle">
+        <div class="toggle-slider"></div>
+      </div>
+    </div>
+    <div class="mode-description">
+      デバイス上でプライベートなAI処理。初回のみモデルダウンロードが必要です。
+    </div>
+    
+    <!-- モデル選択 -->
+<div id="modelSelection" class="model-grid">
+  <div class="model-card selected" data-model="phi3-mini">
+    <div class="model-name">Phi-3 Mini</div>
+    <div class="model-size">2.4GB</div>
+    <div class="model-status status-ready">✓ 推奨</div>
+  </div>
+  <div class="model-card" data-model="llama32-3b">
+    <div class="model-name">Llama 3.2 3B</div>
+    <div class="model-size">2.0GB</div>
+    <div class="model-status">高精度</div>
+  </div>
+  <div class="model-card" data-model="llama32-1b">
+    <div class="model-name">Llama 3.2 1B</div>
+    <div class="model-size">800MB</div>
+    <div class="model-status">軽量</div>
+  </div>
+  <div class="model-card" data-model="gemma2-2b">
+    <div class="model-name">Gemma 2 2B</div>
+    <div class="model-size">1.6GB</div>
+    <div class="model-status">高速</div>
+  </div>
+</div>
+    
+    <!-- プログレスバー -->
+    <div class="progress-container" id="modelProgress">
+      <div class="progress-bar" id="progressBar">0%</div>
+    </div>
+    
+    <button id="initializeLocalLlm">ローカルLLMを初期化</button>
+    
+    <div class="status-indicator">
+      <div id="localLlmStatusDot" class="indicator-dot indicator-inactive"></div>
+      <span id="localLlmStatusText">未初期化</span>
+    </div>
+  </div>
+  
+  <!-- 処理優先順位表示 -->
+  <div class="section">
+    <h3 style="margin: 0 0 10px 0; font-size: 14px;">処理優先順位</h3>
+    <div id="processingPriority" class="mode-description">
+      ローカルLLM → Gemini API
+    </div>
+    <div class="help-text">
+      ローカル処理優先でプライバシーを保護、必要時にクラウドAPIを使用
+    </div>
+  </div>
+  
+  <!-- オートマチックモード設定 -->
+  <div class="section">
+    <div class="toggle-container">
+      <div class="toggle-label">
+        オートマチックモード
+        <span id="autoModeIndicator" class="mode-indicator mode-auto">AUTO</span>
+      </div>
+      <div class="toggle-switch" id="autoModeToggle">
+        <div class="toggle-slider"></div>
+      </div>
+    </div>
+    <div class="mode-description">
+      STREAMED Dock上で候補が見つからない場合に自動的にOCR処理を実行します。対応サイトでのみ動作します。
+    </div>
+    
+    <div class="status-indicator">
+      <div id="autoModeStatusDot" class="indicator-dot indicator-inactive"></div>
+      <span id="autoModeStatusText">無効</span>
+    </div>
+  </div>
+  
+  <!-- 統計情報 -->
+  <div class="section">
+    <h3 style="margin: 0 0 10px 0; font-size: 14px;">使用統計 (24時間)</h3>
+    <div class="stats-grid" id="usageStats">
+      <div class="stat-item">
+        <div class="stat-value" id="totalProcessed">0</div>
+        <div class="stat-label">処理数</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="avgTime">0ms</div>
+        <div class="stat-label">平均時間</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="localRatio">0%</div>
+        <div class="stat-label">ローカル率</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="successRate">100%</div>
+        <div class="stat-label">成功率</div>
+      </div>
+    </div>
+    <button id="refreshStats">統計を更新</button>
+  </div>
+  
+  <!-- Gemini API設定 (詳細版) -->
+  <div class="section">
+    <div class="toggle-container">
+      <div class="toggle-label">
+        Gemini API
+        <span id="geminiIndicator" class="mode-indicator mode-cloud">クラウド</span>
+      </div>
+      <div class="toggle-switch active" id="geminiToggle">
+        <div class="toggle-slider"></div>
+      </div>
+    </div>
+    <div class="mode-description">
+      フォールバック用クラウドAPI。ローカル処理失敗時に使用
+    </div>
+    
+    <div id="geminiSettings">
+      <!-- APIキー設定 -->
+      <div class="api-key-container" style="position: relative; margin-top: 10px;">
+        <input type="password" id="apiKey" placeholder="Gemini API キーを入力">
+        <span class="toggle-visibility" id="toggleVisibility" style="position: absolute; right: 10px; top: 10px; cursor: pointer; color: #666;">👁️</span>
+      </div>
+      
+      <button id="saveApiKey" style="margin-top: 8px;">APIキーを保存</button>
+      
+      <!-- Geminiモデル選択 -->
+      <div style="margin-top: 15px;">
+        <label for="geminiModel" style="display: block; margin-bottom: 5px; font-weight: 500;">Geminiモデル:</label>
+        <select id="geminiModel">
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash (推奨)</option>
+          <option value="gemini-2.0-flash-light">Gemini 2.0 Flash Light (軽量・高速)</option>
+          <option value="gemini-2.5-flash">Gemini 2.5 Flash (最新・高精度)</option>
+          <option value="gemini-1.5-flash">Gemini 1.5 Flash (安定版)</option>
+        </select>
+        <div class="help-text">
+          文字認識の精度と速度、コストのバランスを調整できます
+        </div>
+      </div>
+      
+      <!-- 処理モード設定 -->
+      <div style="margin-top: 15px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500;">処理モード:</label>
+        <div class="radio-group">
+          <label style="display: flex; align-items: center; margin-bottom: 5px; font-weight: normal;">
+            <input type="radio" id="accurateMode" name="ocrMode" value="accurate" checked style="margin-right: 8px;">
+            精度優先（コンテキスト考慮）
+          </label>
+          <label style="display: flex; align-items: center; margin-bottom: 5px; font-weight: normal;">
+            <input type="radio" id="fastMode" name="ocrMode" value="fast" style="margin-right: 8px;">
+            速度優先（文字認識のみ）
+          </label>
+        </div>
+        <div class="help-text">
+          精度優先はより多くのトークンを消費しますが認識精度が向上します
+        </div>
+      </div>
+      
+      <!-- APIテスト -->
+      <button id="testGeminiApi" style="margin-top: 10px; background-color: #4CAF50;">Gemini API接続テスト</button>
+    </div>
+    
+    <div class="status-indicator">
+      <div id="geminiStatusDot" class="indicator-dot indicator-inactive"></div>
+      <span id="geminiStatusText">確認中...</span>
+    </div>
+    
+    <!-- APIキー取得リンク -->
+    <div class="help-text" style="margin-top: 10px;">
+      <strong>APIキー取得:</strong> 
+      <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color: #1a73e8;">Google AI Studio</a>
+      で無料取得可能
+    </div>
+  </div>
+  
+  <!-- 言語設定 -->
+  <div class="section">
+    <label for="language">言語設定:</label>
+    <select id="language">
+      <option value="ja">日本語</option>
+      <option value="en">English</option>
+      <option value="ja,en">日本語+English</option>
+    </select>
+  </div>
+  
+  <!-- 操作ボタン -->
+  <div class="section">
+    <button id="testOcr">OCRテスト実行</button>
+    <button id="clearCache">キャッシュクリア</button>
+  </div>
+  
+  <div class="help-text">
+    <p><strong>ローカルLLM:</strong> 完全プライベート、高速、オフライン対応</p>
+    <p><strong>オートモード:</strong> STREAMED Dock上で自動OCR実行</p>
+    <p><strong>ショートカット:</strong> Alt+Shift+Z でOCR実行</p>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
